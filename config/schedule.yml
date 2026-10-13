@@ -1,0 +1,14 @@
+# Loaded by sidekiq-cron when the Sidekiq server boots. Times are UTC.
+return_reminder_due_soon:
+  cron: "0 8 * * *"
+  class: "Reminders::SchedulerJob"
+  args: ["due_soon"]
+  active_job: true
+  description: "Email readers whose book is due back in 3 days"
+
+return_reminder_due_today:
+  cron: "5 8 * * *"
+  class: "Reminders::SchedulerJob"
+  args: ["due_today"]
+  active_job: true
+  description: "Email readers whose book is due back today"

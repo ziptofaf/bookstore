@@ -1,0 +1,61 @@
+x-app: &app
+  build: .
+  environment:
+    RAILS_ENV: development
+    DB_HOST: db
+    DB_USERNAME: postgres
+    DB_PASSWORD: postgres
+    REDIS_URL: redis://redis:6379/0
+
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  web:
+    <<: *app
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:3000/up"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+
+  sidekiq:
+    <<: *app
+    command: ["bundle", "exec", "sidekiq", "-C", "config/sidekiq.yml"]
+    depends_on:
+      redis:
+        condition: service_healthy
+      web:
+        condition: service_healthy # database is migrated and seeded by then
+
+volumes:
+  postgres_data:
+  redis_data:
